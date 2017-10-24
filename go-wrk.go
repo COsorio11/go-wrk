@@ -17,45 +17,49 @@ import (
 const APP_VERSION = "0.1"
 
 //default that can be overridden from the command line
-var versionFlag bool = false
-var helpFlag bool = false
-var duration int = 10 //seconds
-var goroutines int = 2
-var testUrl string
-var method string = "GET"
-var host string
-var headerStr string
-var header map[string]string
-var statsAggregator chan *loader.RequesterStats
-var timeoutms int
-var allowRedirectsFlag bool = false
-var disableCompression bool
-var disableKeepAlive bool
-var playbackFile string
-var reqBody string
-var clientCert string
-var clientKey string
-var caCert string
-var http2 bool
+var (
+	allowRedirectsFlag bool = false
+	caCert             string
+	clientCert         string
+	clientKey          string
+	disableCompression bool
+	disableKeepAlive   bool
+	duration           int = 10 //seconds
+	goroutines         int = 2
+	header             map[string]string
+	headerStr          string
+	helpFlag           bool = false
+	host               string
+	http2              bool
+	insecure           bool   = false
+	method             string = "GET"
+	playbackFile       string
+	reqBody            string
+	statsAggregator    chan *loader.RequesterStats
+	testUrl            string
+	timeoutms          int
+	versionFlag        bool = false
+)
 
 func init() {
-	flag.BoolVar(&versionFlag, "v", false, "Print version details")
 	flag.BoolVar(&allowRedirectsFlag, "redir", false, "Allow Redirects")
-	flag.BoolVar(&helpFlag, "help", false, "Print help")
 	flag.BoolVar(&disableCompression, "no-c", false, "Disable Compression - Prevents sending the \"Accept-Encoding: gzip\" header")
 	flag.BoolVar(&disableKeepAlive, "no-ka", false, "Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests")
-	flag.IntVar(&goroutines, "c", 10, "Number of goroutines to use (concurrent connections)")
+	flag.BoolVar(&helpFlag, "help", false, "Print help")
+	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
+	flag.BoolVar(&versionFlag, "v", false, "Print version details")
+	flag.BoolVar(&insecure, "k", false, "allow for insecure request")
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
+	flag.IntVar(&goroutines, "c", 10, "Number of goroutines to use (concurrent connections)")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
-	flag.StringVar(&method, "M", "GET", "HTTP method")
-	flag.StringVar(&host, "host", "", "Host Header")
-	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
-	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
-	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
+	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
 	flag.StringVar(&clientCert, "cert", "", "CA certificate file to verify peer against (SSL/TLS)")
 	flag.StringVar(&clientKey, "key", "", "Private key file name (SSL/TLS")
-	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
-	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
+	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
+	flag.StringVar(&host, "host", "", "Host Header")
+	flag.StringVar(&method, "M", "GET", "HTTP method")
+	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
+	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
 }
 
 //printDefaults a nicer format for the defaults
@@ -124,7 +128,7 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive, clientCert, clientKey, caCert, http2)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, clientCert, clientKey, caCert, http2, insecure)
 
 	for i := 0; i < goroutines; i++ {
 		go loadGen.RunSingleLoadSession()
@@ -164,5 +168,4 @@ func main() {
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
-
 }
